@@ -7,8 +7,8 @@
   "scripts": {
     "build": "tsc && node build-static.mjs",
     "watch": "tsc --watch",
-    "start": "npm run build && node server.mjs",
-    "serve": "node server.mjs",
+    "start": "npm run build && node lib/server.mjs",
+    "serve": "node lib/server.mjs",
     "setup": "node setup-monday.mjs"
   },
   "devDependencies": {
