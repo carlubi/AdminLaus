@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "main": "api/index.mjs",
   "description": "Taula de control de prescriptors sincronitzada amb Monday.com",
   "scripts": {
     "build": "tsc && node build-static.mjs",
