@@ -4,14 +4,7 @@
   "outputDirectory": ".",
   "functions": {
     "server.mjs": {
-      "includeFiles": [
-        "monday.mjs",
-        "calendari.mjs",
-        "index.html",
-        "logo.png",
-        "favicon.png",
-        "dist/**"
-      ]
+      "includeFiles": "**/*"
     }
   },
   "routes": [
