@@ -2,10 +2,29 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": ".",
-  "rewrites": [
+  "functions": {
+    "server.mjs": {
+      "includeFiles": [
+        "monday.mjs",
+        "calendari.mjs",
+        "index.html",
+        "logo.png",
+        "favicon.png",
+        "dist/**"
+      ]
+    }
+  },
+  "routes": [
     {
-      "source": "/api/:path*",
-      "destination": "/server.mjs"
+      "src": "/api/(.*)",
+      "dest": "/server.mjs"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
