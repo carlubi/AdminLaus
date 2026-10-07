@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ca" class="h-full">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Control de prescriptors · innovaLAUS</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="favicon.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: { marca: { DEFAULT: '#3D6F9F', fosc: '#2F5780', clar: '#EAF1F8', vora: '#D5E0EB' } },
+      keyframes: {
+        entra:   { '0%': { opacity: 0, transform: 'translateY(8px)' },     '100%': { opacity: 1, transform: 'none' } },
+        puja:    { '0%': { opacity: 0, transform: 'translateY(16px) scale(.97)' }, '100%': { opacity: 1, transform: 'none' } },
+        fon:     { '0%': { opacity: 0 }, '100%': { opacity: 1 } },
+        llisca:  { '0%': { opacity: 0, transform: 'translateX(24px)' },    '100%': { opacity: 1, transform: 'none' } },
+        pampallugueja: { '0%,100%': { opacity: 1 }, '50%': { opacity: .35 } },
+        progres: { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(250%)' } },
+      },
+      animation: {
+        entra: 'entra .28s cubic-bezier(.2,.8,.3,1) both',
+        puja: 'puja .3s cubic-bezier(.2,.8,.3,1) both',
+        fon: 'fon .2s ease-out both',
+        llisca: 'llisca .3s cubic-bezier(.2,.8,.3,1) both',
+        pampallugueja: 'pampallugueja 1.2s ease-in-out infinite',
+        progres: 'progres 1.4s ease-in-out infinite',
+      },
+    },
+  },
+};
+</script>
+<style type="text/tailwindcss">
+  @layer components {
+    .cel  { @apply w-full bg-transparent border border-transparent rounded-md px-2 py-1.5 text-sm text-slate-800
+             transition-all duration-150 hover:border-marca-vora focus:outline-none focus:border-marca
+             focus:bg-white focus:ring-2 focus:ring-marca/25; }
+    .btn  { @apply inline-flex items-center gap-2 rounded-lg border border-marca px-4 py-2 text-sm font-medium
+             text-marca bg-white transition-all duration-200 hover:bg-marca-clar hover:shadow-sm
+             active:scale-[.97] focus:outline-none focus:ring-2 focus:ring-marca/40; }
+    .btn-ple { @apply bg-marca text-white font-semibold hover:bg-marca-fosc hover:text-white shadow-sm; }
+    .camp { @apply w-full rounded-lg border border-marca-vora px-3 py-2 text-sm text-slate-800 bg-white
+             transition-all duration-150 focus:outline-none focus:border-marca focus:ring-2 focus:ring-marca/25; }
+    .etiqueta-camp { @apply block text-xs font-semibold uppercase tracking-wide text-marca mb-1.5; }
+  }
+  @layer components {
+    .pestanya { @apply relative px-4 py-2 text-sm font-semibold text-slate-500 rounded-t-lg
+                 transition-colors duration-200 hover:text-marca hover:bg-marca-clar/60; }
+    .pestanya-activa { @apply text-marca bg-marca-clar; }
+    .targeta { @apply text-left bg-white rounded-xl border border-marca-vora p-3 transition-all duration-200
+                cursor-pointer hover:border-marca hover:shadow-md hover:-translate-y-0.5
+                focus:outline-none focus:ring-2 focus:ring-marca/40; }
+  }
+  /* El desament pendent es marca amb una vora suau a la cel·la. */
+  .brut { @apply border-amber-300 bg-amber-50/60; }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-progres { animation: none; transform: none; }
+  }
+</style>
+</head>
+
+<body class="h-full bg-marca-clar text-slate-800 antialiased">
+
+<header class="bg-white border-b-4 border-marca shadow-sm sticky top-0 z-30">
+  <div class="mx-auto max-w-[1700px] px-4 sm:px-7 py-3 flex items-center gap-5">
+    <img src="logo.png" alt="innovaLAUS — helping to grow" class="h-16 sm:h-20 w-auto shrink-0">
+    <div class="min-w-0">
+      <h1 class="text-xl sm:text-2xl font-bold text-marca leading-tight">Control de prescriptors</h1>
+      <p class="text-sm text-slate-500 truncate">Seguiment dels gestors externs que ens porten leads</p>
+    </div>
+    <div class="ml-auto flex items-center gap-3 shrink-0">
+      <span id="estatSync" class="hidden sm:flex items-center gap-2 text-xs font-medium text-slate-500"></span>
+      <button id="afegeix" class="btn btn-ple">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+        <span class="hidden sm:inline">Nou prescriptor</span><span class="sm:hidden">Nou</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<nav class="bg-white border-b border-marca-vora sticky top-[5.5rem] sm:top-[6.5rem] z-20">
+  <div class="mx-auto max-w-[1700px] px-4 sm:px-7 flex gap-1">
+    <button class="pestanya pestanya-activa" data-pestanya="prescriptors">Prescriptors</button>
+    <button class="pestanya" data-pestanya="calendari">Calendari de subvencions</button>
+  </div>
+</nav>
+
+<main class="mx-auto max-w-[1700px] px-4 sm:px-7 py-5">
+
+  <section id="vistaPrescriptors">
+  <div id="avis" class="hidden mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 animate-entra"></div>
+
+  <div class="flex flex-wrap items-center gap-2.5 mb-4">
+    <div class="relative">
+      <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-3.5-3.5"/></svg>
+      <input type="search" id="cerca" placeholder="Cerca per empresa, contacte, CIF, correu…"
+             class="camp pl-9 w-72 max-w-full">
+    </div>
+    <select id="filtreResp" class="camp w-auto"><option value="">Tots els responsables</option></select>
+    <select id="filtreEstat" class="camp w-auto"><option value="">Tots els estats</option></select>
+    <select id="filtreComunitat" class="camp w-auto"><option value="">Totes les comunitats</option></select>
+    <div class="flex-1"></div>
+    <button id="refresca" class="btn" title="Torna a llegir el tauler de Monday">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M19.4 9A8 8 0 0 0 5.6 6.6L4 9m16 6-1.6 2.4A8 8 0 0 1 4.6 15"/></svg>
+      <span class="hidden sm:inline">Actualitza</span>
+    </button>
+    <button id="exporta" class="btn">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+      <span class="hidden sm:inline">Exporta CSV</span>
+    </button>
+  </div>
+
+  <div id="resum" class="flex flex-wrap gap-2 mb-4"></div>
+
+  <div class="bg-white rounded-2xl border border-marca-vora shadow-sm shadow-marca/5 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[1650px] border-collapse">
+        <thead>
+          <tr class="bg-marca text-white text-left text-xs uppercase tracking-wide">
+            <th data-camp="empresa"    class="ordena w-[28rem] px-3 py-3 font-semibold whitespace-nowrap cursor-pointer select-none transition-colors hover:bg-marca-fosc">Prescriptor/a</th>
+            <th data-camp="responsable"class="ordena px-3 py-3 font-semibold whitespace-nowrap cursor-pointer select-none transition-colors hover:bg-marca-fosc w-40">Responsable</th>
+            <th data-camp="estat"      class="ordena px-3 py-3 font-semibold whitespace-nowrap cursor-pointer select-none transition-colors hover:bg-marca-fosc w-48">Estat</th>
+            <th data-camp="comunitat"  class="ordena px-3 py-3 font-semibold whitespace-nowrap cursor-pointer select-none transition-colors hover:bg-marca-fosc w-48">Comunitats autònomes</th>
+            <th data-camp="contacte"   class="ordena px-3 py-3 font-semibold whitespace-nowrap cursor-pointer select-none transition-colors hover:bg-marca-fosc">Contacte principal</th>
+            <th class="px-3 py-3 font-semibold whitespace-nowrap w-40">Telèfon principal</th>
+            <th class="px-3 py-3 font-semibold whitespace-nowrap">Correu electrònic</th>
+            <th class="px-3 py-3 font-semibold whitespace-nowrap w-32">CIF</th>
+            <th data-camp="fee"        class="ordena px-3 py-3 font-semibold whitespace-nowrap cursor-pointer select-none transition-colors hover:bg-marca-fosc w-28 text-right">Fee (€)</th>
+            <th data-camp="acord"      class="ordena px-3 py-3 font-semibold whitespace-nowrap cursor-pointer select-none transition-colors hover:bg-marca-fosc w-28 text-right">Acord (%)</th>
+            <th data-camp="dataVisita" class="ordena px-3 py-3 font-semibold whitespace-nowrap cursor-pointer select-none transition-colors hover:bg-marca-fosc w-52">Data última visita</th>
+            <th class="px-2 py-3 w-12"></th>
+          </tr>
+        </thead>
+        <tbody id="cos" class="divide-y divide-marca-vora"></tbody>
+      </table>
+    </div>
+    <div id="buit" class="hidden px-6 py-16 text-center text-slate-500">
+      <p class="font-medium">Encara no hi ha cap prescriptor.</p>
+      <p class="text-sm mt-1">Fes clic a «Nou prescriptor» per començar.</p>
+    </div>
+    <div id="carregant" class="px-6 py-16 text-center text-slate-400 animate-pampallugueja">Carregant el tauler de Monday…</div>
+  </div>
+  </section>
+
+  <!-- ===================== CALENDARI TRIMESTRAL ===================== -->
+  <section id="vistaCalendari" class="hidden">
+    <div id="avisCal" class="hidden mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 animate-entra"></div>
+
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+      <div class="flex items-center gap-1 bg-white rounded-lg border border-marca-vora p-1">
+        <button id="anyAnterior" class="p-1.5 rounded-md text-marca transition-colors hover:bg-marca-clar" aria-label="Any anterior">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <span id="anyActual" class="px-2 font-bold text-marca tabular-nums"></span>
+        <button id="anySeguent" class="p-1.5 rounded-md text-marca transition-colors hover:bg-marca-clar" aria-label="Any següent">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </div>
+      <nav id="camiCal" class="flex flex-wrap items-center gap-1 text-sm"></nav>
+      <div class="flex-1"></div>
+      <button id="botoSenseDates" class="hidden btn border-amber-400 text-amber-700 hover:bg-amber-50" title="Subvencions que encara no tenen dates">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v5m0 3.5h.01M10.3 3.9 2.4 17.5A1.8 1.8 0 0 0 4 20.2h16a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z"/></svg>
+        Sense dates <span id="compteSenseDates" class="font-bold"></span>
+      </button>
+      <button id="refrescaCal" class="btn" title="Torna a llegir el tauler">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M19.4 9A8 8 0 0 0 5.6 6.6L4 9m16 6-1.6 2.4A8 8 0 0 1 4.6 15"/></svg>
+        <span class="hidden sm:inline">Actualitza</span>
+      </button>
+      <label class="flex items-center gap-2 text-sm font-medium text-slate-600" for="selectorVistaCal">
+        Vista
+        <select id="selectorVistaCal" class="camp w-auto !py-2">
+          <option value="navegacio">Navegació</option>
+          <option value="trimestres">Per trimestres</option>
+          <option value="kanban">Kanban per estat</option>
+          <option value="mensual">Calendari mensual</option>
+        </select>
+      </label>
+      <button id="novaSubvencio" class="btn btn-ple">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+        Nova subvenció
+      </button>
+    </div>
+
+    <div id="graelaCal" class="grid gap-3 mb-2"></div>
+    <p id="ajudaCalendari" class="text-xs text-slate-400 mb-4">Un clic en una targeta per veure què hi ha · doble clic per entrar-hi</p>
+    <div id="detallCal"></div>
+    <div id="carregantCal" class="py-16 text-center text-slate-400 animate-pampallugueja">Carregant el calendari…</div>
+  </section>
+</main>
+
+<!-- Finestra per donar d'alta un prescriptor -->
+<div id="modal" class="hidden fixed inset-0 z-50">
+  <div id="fons" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm animate-fon"></div>
+  <div class="relative h-full overflow-y-auto p-4 flex items-start sm:items-center justify-center">
+    <form id="formNou" class="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl animate-puja my-4">
+      <div class="flex items-center gap-3 px-6 py-4 border-b border-marca-vora">
+        <h2 class="text-lg font-bold text-marca">Nou prescriptor</h2>
+        <button type="button" id="tanca" class="ml-auto p-1.5 rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700" aria-label="Tanca">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="px-6 py-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="sm:col-span-2">
+          <label class="etiqueta-camp" for="n_empresa">Empresa prescriptora <span class="text-red-600">*</span></label>
+          <input id="n_empresa" name="empresa" required class="camp" placeholder="Nom de l'empresa" autocomplete="off">
+          <p id="errEmpresa" class="hidden mt-1.5 text-xs font-medium text-red-600">El nom de l'empresa és obligatori.</p>
+        </div>
+        <div>
+          <label class="etiqueta-camp" for="n_responsable">Responsable</label>
+          <select id="n_responsable" name="responsable" class="camp"></select>
+        </div>
+        <div>
+          <label class="etiqueta-camp" for="n_estat">Estat</label>
+          <select id="n_estat" name="estat" class="camp"></select>
+        </div>
+        <div>
+          <label class="etiqueta-camp">Comunitats autònomes</label>
+          <button type="button" id="n_comunitats"
+                  class="camp text-left flex flex-wrap items-center gap-1 min-h-[2.5rem] cursor-pointer hover:border-marca"></button>
+        </div>
+        <div>
+          <label class="etiqueta-camp" for="n_contacte">Nom del contacte principal</label>
+          <input id="n_contacte" name="contacte" class="camp" placeholder="Nom i cognoms" autocomplete="off">
+        </div>
+        <div>
+          <label class="etiqueta-camp" for="n_telefon">Telèfon principal</label>
+          <input id="n_telefon" name="telefon" type="tel" class="camp" placeholder="600 000 000" autocomplete="off">
+        </div>
+        <div>
+          <label class="etiqueta-camp" for="n_correu">Correu electrònic principal</label>
+          <input id="n_correu" name="correu" type="email" class="camp" placeholder="nom@empresa.com" autocomplete="off">
+        </div>
+        <div>
+          <label class="etiqueta-camp" for="n_cif">CIF</label>
+          <input id="n_cif" name="cif" class="camp" placeholder="B12345678" autocomplete="off">
+        </div>
+        <div>
+          <label class="etiqueta-camp" for="n_fee">Fee (€)</label>
+          <input id="n_fee" name="fee" type="number" min="0" step="0.01" inputmode="decimal" class="camp" placeholder="0,00">
+        </div>
+        <div>
+          <label class="etiqueta-camp" for="n_acord">Acord (%)</label>
+          <input id="n_acord" name="acord" type="number" min="0" max="100" step="0.01" inputmode="decimal" class="camp" placeholder="0,00">
+        </div>
+        <div>
+          <label class="etiqueta-camp" for="n_data">Data de l'última visita</label>
+          <input id="n_data" name="dataVisita" type="date" class="camp">
+          <p id="etiquetaData" class="mt-1.5 text-xs text-marca min-h-[1rem]"></p>
+        </div>
+        <div class="sm:col-span-2">
+          <label class="etiqueta-camp" for="n_anotacio">Anotació</label>
+          <textarea id="n_anotacio" name="anotacio" rows="3" class="camp resize-y" placeholder="Notes de la conversa, condicions pactades…"></textarea>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2.5 px-6 py-4 border-t border-marca-vora bg-slate-50/70 rounded-b-2xl">
+        <button type="button" id="cancella" class="btn border-slate-300 text-slate-600 hover:bg-slate-100">Cancel·la</button>
+        <button type="submit" id="desa" class="btn btn-ple">Desa a Monday</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Confirmació visual abans d'eliminar un prescriptor -->
+<div id="confirmacioElimina" class="hidden fixed inset-0 z-[70]">
+  <div id="fonsElimina" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm animate-fon"></div>
+  <div class="relative h-full overflow-y-auto p-4 flex items-center justify-center">
+    <section class="w-full max-w-md rounded-2xl bg-white shadow-2xl animate-puja" role="dialog" aria-modal="true" aria-labelledby="titolElimina" aria-describedby="textElimina">
+      <div class="p-6 sm:p-7">
+        <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-600" aria-hidden="true"><svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13"/></svg></span>
+        <h2 id="titolElimina" class="mt-5 text-xl font-bold text-slate-800">Eliminar prescriptor?</h2>
+        <p id="textElimina" class="mt-2 text-sm leading-6 text-slate-600">Aquesta acció eliminarà el prescriptor de Monday i no es pot desfer.</p>
+        <p id="nomElimina" class="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-800 break-words"></p>
+      </div>
+      <div class="flex flex-col-reverse gap-2 border-t border-marca-vora bg-slate-50/70 px-6 py-4 sm:flex-row sm:justify-end">
+        <button type="button" id="cancellaElimina" class="btn border-slate-300 text-slate-600 hover:bg-slate-100">Cancel·la</button>
+        <button type="button" id="confirmaElimina" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"><svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13"/></svg>Elimina</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div id="expedientPrescriptor" class="hidden fixed inset-0 z-[54] bg-marca-clar">
+  <main id="contingutExpedient" tabindex="-1" class="h-full overflow-y-auto bg-marca-clar"></main>
+</div>
+
+<div id="modalSenseDates" class="hidden fixed inset-0 z-[52]">
+  <div id="fonsSenseDates" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm animate-fon"></div>
+  <div class="relative h-full overflow-y-auto p-4 flex items-start sm:items-center justify-center">
+    <div class="relative w-full max-w-2xl bg-marca-clar rounded-2xl shadow-2xl animate-puja my-4 flex flex-col max-h-[85vh]">
+      <div class="flex items-start gap-3 px-6 py-4 bg-white border-b border-marca-vora rounded-t-2xl shrink-0">
+        <div>
+          <h2 class="text-lg font-bold text-marca">Encara sense dates</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Fins que no tinguin dates previstes no sortiran al calendari. Clica'n una per posar-les-hi.</p>
+        </div>
+        <button type="button" id="tancaSenseDates" class="ml-auto p-1.5 rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700" aria-label="Tanca">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <div id="llistaSenseDates" class="overflow-y-auto px-6 py-4"></div>
+    </div>
+  </div>
+</div>
+
+<div id="modalSub" class="hidden fixed inset-0 z-50">
+  <div id="fonsSub" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm animate-fon"></div>
+  <div class="relative h-full overflow-y-auto p-4 flex items-start sm:items-center justify-center">
+    <form id="formSub" class="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl animate-puja my-4">
+      <div class="flex items-center gap-3 px-6 py-4 border-b border-marca-vora">
+        <h2 class="text-lg font-bold text-marca">Nova subvenció</h2>
+        <button type="button" id="tancaSub" class="ml-auto p-1.5 rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700" aria-label="Tanca">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <div class="px-6 py-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="sm:col-span-2">
+          <label class="etiqueta-camp" for="s_titol">Nom de la subvenció <span class="text-red-600">*</span></label>
+          <input id="s_titol" name="titol" required class="camp" placeholder="p. ex. Joves Autònoms 2027" autocomplete="off">
+          <p id="errTitol" class="hidden mt-1.5 text-xs font-medium text-red-600">El nom és obligatori.</p>
+        </div>
+        <div>
+          <label class="etiqueta-camp" for="s_grup">Trimestre <span class="text-red-600">*</span></label>
+          <select id="s_grup" name="grupId" class="camp"></select>
+        </div>
+        <div>
+          <label class="etiqueta-camp" for="s_prob">Probabilitat que surti</label>
+          <select id="s_prob" name="probabilitat" class="camp"></select>
+        </div>
+        <div>
+          <label class="etiqueta-camp" for="s_inici">Data prevista d'obertura</label>
+          <input id="s_inici" name="inici" type="date" class="camp">
+        </div>
+        <div>
+          <label class="etiqueta-camp" for="s_fi">Data prevista de tancament</label>
+          <input id="s_fi" name="fi" type="date" class="camp">
+        </div>
+        <div>
+          <label class="etiqueta-camp" for="s_estat">Estat</label>
+          <select id="s_estat" name="estat" class="camp"></select>
+        </div>
+        <div class="sm:col-span-2">
+          <label class="etiqueta-camp" for="s_comentari">Comentari</label>
+          <textarea id="s_comentari" name="comentari" rows="3" class="camp resize-y" placeholder="Organisme, requisits, què cal preparar…"></textarea>
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-2.5 px-6 py-4 border-t border-marca-vora bg-slate-50/70 rounded-b-2xl">
+        <button type="button" id="cancellaSub" class="btn border-slate-300 text-slate-600 hover:bg-slate-100">Cancel·la</button>
+        <button type="submit" id="desaSub" class="btn btn-ple">Desa a Monday</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="calaix" class="hidden fixed inset-0 z-50">
+  <div id="fonsCalaix" class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-fon"></div>
+  <aside id="contingutCalaix" class="absolute right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl
+         overflow-y-auto animate-llisca"></aside>
+</div>
+
+<div id="calaixUpdates" class="hidden fixed inset-0 z-[55]">
+  <div id="fonsUpdates" class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-fon"></div>
+  <aside class="absolute right-0 top-0 h-full w-full max-w-md bg-marca-clar shadow-2xl flex flex-col animate-llisca">
+    <header class="bg-white border-b border-marca-vora px-5 py-4 flex items-start gap-3 shrink-0">
+      <div class="min-w-0 flex-1">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-marca">Comentaris de Monday</p>
+        <h2 id="titolUpdates" class="text-base font-bold text-slate-800 truncate"></h2>
+      </div>
+      <button id="tancaUpdates" class="p-1.5 rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700" aria-label="Tanca">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </header>
+
+    <div class="flex-1 overflow-y-auto p-4 space-y-2.5">
+      <div id="carregantUpdates" class="hidden py-8 text-center text-sm text-slate-400 animate-pampallugueja">Carregant els comentaris…</div>
+      <div id="filUpdates" class="space-y-2.5"></div>
+    </div>
+
+    <form id="formUpdate" class="bg-white border-t border-marca-vora p-3 shrink-0">
+      <div id="respostaA" class="flex items-center gap-2 mb-1.5 min-h-[1rem]"></div>
+      <textarea id="nouUpdate" name="text" rows="3" required placeholder="Escriu un comentari…"
+                class="camp resize-y text-sm"></textarea>
+      <div class="flex items-center gap-2 mt-2">
+        <span class="text-[11px] text-slate-400">⌘/Ctrl + Enter per enviar</span>
+        <button type="submit" id="enviaUpdate" class="btn btn-ple ml-auto !py-1.5">Publica a Monday</button>
+      </div>
+    </form>
+  </aside>
+</div>
+
+<div id="avisos" class="fixed bottom-5 right-5 z-[60] flex flex-col gap-2 items-end"></div>
+
+<!-- Tota la lògica viu a src/app.ts i es compila a dist/ amb: npm run build -->
+<script type="module" src="/dist/app.js"></script>
+</body>
+</html>
