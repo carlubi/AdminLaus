@@ -1,5 +1,6 @@
 // Capa d'accés a l'API de Monday.com. Comparada per server.mjs i setup-monday.mjs.
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -51,7 +52,7 @@ export const CAMPS = [
 ];
 
 export async function gql(query, variables = {}) {
-  if (!API_KEY) throw new Error('Falta monday_apiKey al fitxer .env');
+  if (!API_KEY) throw new Error('Falta monday_apiKey o MONDAY_API_KEY a les variables d\'entorn');
   const r = await fetch('https://api.monday.com/v2', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: API_KEY, 'API-Version': '2024-10' },
@@ -198,7 +199,7 @@ export async function esborraElement(itemId) {
 /* ---------- analítica de prescriptors als taulers de subvencions ---------- */
 
 export const WORKSPACE_SUBVENCIONS = env.monday_workspaceSubvencions || '7397781';
-const FITXER_CACHE_SUBVENCIONS = path.join(ARREL, '.data', 'subvencions-cache.json');
+const FITXER_CACHE_SUBVENCIONS = path.join(process.env.VERCEL ? os.tmpdir() : path.join(ARREL, '.data'), 'subvencions-cache.json');
 const VIDA_CACHE_SUBVENCIONS = 5 * 60_000;
 let cacheSubvencions = { quan: 0, registres: [] };
 let actualitzacioSubvencions = null;
