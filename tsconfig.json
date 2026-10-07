@@ -4,7 +4,7 @@
     "module": "ES2022",
     "moduleResolution": "bundler",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "rootDir": "src",
+    "rootDir": "client",
     "outDir": "dist",
     "strict": true,
     "noUncheckedIndexedAccess": false,
@@ -16,5 +16,5 @@
     "sourceMap": true,
     "removeComments": false
   },
-  "include": ["src/**/*.ts"]
+  "include": ["client/**/*.ts"]
 }

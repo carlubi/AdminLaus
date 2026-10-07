@@ -65,7 +65,7 @@ function fitxerEstatic(res, url) {
   fs.createReadStream(fitxer).pipe(res);
 }
 
-const servidor = http.createServer(async (req, res) => {
+export async function handleRequest(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const ruta = url.pathname;
 
@@ -190,22 +190,29 @@ const servidor = http.createServer(async (req, res) => {
     console.error(`[${req.method} ${ruta}]`, e.message);
     return json(res, 502, { error: e.message });
   }
-});
+}
 
-servidor.listen(PORT, async () => {
-  console.log(`\n  Control de prescriptors · http://localhost:${PORT}\n`);
-  if (!API_KEY) return console.error('  ⚠ Falta monday_apiKey al fitxer .env: la web no podrà sincronitzar.\n');
-  try {
-    const e = await esquema();
-    console.log(`  Tauler de Monday: ${e.nomTauler} (${BOARD_ID})`);
-    if (e.falten.length) console.log(`  ⚠ Falten columnes: ${e.falten.join(', ')} → executa: node setup-monday.mjs`);
-    else console.log('  ✓ Totes les columnes lligades correctament.');
-    const c = await esquemaCal();
-    console.log(`  Calendari de subvencions: ${c.nomTauler} (${TAULER_CAL})`);
-    if (c.falten.length) console.log(`  ⚠ Falten columnes al calendari: ${c.falten.join(', ')}`);
-    else console.log(`  ✓ Calendari lligat ${c.taulerSub ? '(amb subtasques)' : '(sense subtasques)'}.`);
-  } catch (e) { console.error(`  ⚠ No s'ha pogut llegir el tauler: ${e.message}`); }
-  // No bloquegem l'arrencada: una còpia persistent ja es pot servir mentre es refresca Monday.
-  void actualitzaCacheSubvencions().catch(e => console.warn(`  ⚠ No s'ha pogut actualitzar les analítiques: ${e.message}`));
-  console.log('');
-});
+export default handleRequest;
+
+// En local mantenim el servidor HTTP original. En Vercel, api/index.mjs
+// importa handleRequest com una función serverless y no abre ningún puerto.
+if (process.env.VERCEL !== '1') {
+  const servidor = http.createServer(handleRequest);
+  servidor.listen(PORT, async () => {
+    console.log(`\n  Control de prescriptors · http://localhost:${PORT}\n`);
+    if (!API_KEY) return console.error('  ⚠ Falta monday_apiKey al fitxer .env: la web no podrà sincronitzar.\n');
+    try {
+      const e = await esquema();
+      console.log(`  Tauler de Monday: ${e.nomTauler} (${BOARD_ID})`);
+      if (e.falten.length) console.log(`  ⚠ Falten columnes: ${e.falten.join(', ')} → executa: node setup-monday.mjs`);
+      else console.log('  ✓ Totes les columnes lligades correctament.');
+      const c = await esquemaCal();
+      console.log(`  Calendari de subvencions: ${c.nomTauler} (${TAULER_CAL})`);
+      if (c.falten.length) console.log(`  ⚠ Falten columnes al calendari: ${c.falten.join(', ')}`);
+      else console.log(`  ✓ Calendari lligat ${c.taulerSub ? '(amb subtasques)' : '(sense subtasques)'}.`);
+    } catch (e) { console.error(`  ⚠ No s'ha pogut llegir el tauler: ${e.message}`); }
+    // No bloquegem l'arrencada: una còpia persistent ja es pot servir mentre es refresca Monday.
+    void actualitzaCacheSubvencions().catch(e => console.warn(`  ⚠ No s'ha pogut actualitzar les analítiques: ${e.message}`));
+    console.log('');
+  });
+}

@@ -1,16 +1,11 @@
 {
   "version": 2,
   "buildCommand": "npm run build",
-  "outputDirectory": ".",
-  "functions": {
-    "server.mjs": {
-      "includeFiles": "**/*"
-    }
-  },
+  "outputDirectory": "public",
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/server.mjs"
+      "dest": "/api/index.mjs"
     },
     {
       "handle": "filesystem"

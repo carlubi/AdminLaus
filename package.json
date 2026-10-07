@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Taula de control de prescriptors sincronitzada amb Monday.com",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node build-static.mjs",
     "watch": "tsc --watch",
     "start": "npm run build && node server.mjs",
     "serve": "node server.mjs",
