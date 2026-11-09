@@ -54,4 +54,10 @@ test('la función Vercel solo atiende la API y recupera la ruta del rewrite', as
   const nested = await request(vercelRequest, '/api/index.mjs?__apiPath=unknown/nested');
   assert.equal(nested.status, 404);
   assert.match(nested.body, /Ruta desconeguda/);
+
+  const altreNom = await request(vercelRequest, '/api/index?__apiPath=elements', {
+    method: 'POST', body: {},
+  });
+  assert.equal(altreNom.status, 400);
+  assert.match(altreNom.body, /empresa/);
 });

@@ -228,7 +228,7 @@ function desaCacheSubvencions() {
 
 carregaCacheSubvencions();
 const normalitza = text => String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-const estatGrup = titol => /sol licitud|sollicitud/.test(normalitza(titol)) ? 'sollicitud' : /lead/.test(normalitza(titol)) ? 'lead' : null;
+const estatGrup = titol => /sol licitud|sollicitud|solicitud/.test(normalitza(titol)) ? 'sollicitud' : /lead/.test(normalitza(titol)) ? 'lead' : null;
 /** Taulers operatius o històrics que no són subvencions i no s'han de mostrar mai. */
 function taulerExclosAnalitica(nom) {
   const n = normalitza(nom);

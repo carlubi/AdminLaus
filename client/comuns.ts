@@ -23,7 +23,7 @@ export async function api<T>(ruta: string, opcions: RequestInit = {}): Promise<T
     ...opcions,
   });
   const dades = await r.json().catch(() => ({})) as T & { error?: string };
-  if (!r.ok) throw new Error(dades.error || `Error ${r.status}`);
+  if (!r.ok) throw new Error(`${dades.error || `Error ${r.status}`} (${ruta})`);
   return dades;
 }
 

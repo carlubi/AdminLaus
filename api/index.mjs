@@ -6,7 +6,9 @@ export default function vercelRequest(req, res) {
   // /api/index.mjs en req.url en lugar de la URL original.
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const path = url.searchParams.get('__apiPath');
-  if (path && url.pathname === '/api/index.mjs') {
+  // Vercel pot exposar la funció com /api/index, /api/index.mjs o la ruta
+  // original segons el runtime. El paràmetre del rewrite és la font fiable.
+  if (path) {
     url.pathname = `/api/${path.replace(/^\/+/, '')}`;
     url.searchParams.delete('__apiPath');
     req.url = `${url.pathname}${url.search}`;

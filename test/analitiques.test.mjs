@@ -11,7 +11,7 @@ test('el detall suma coincidències de diverses pàgines sense una petició llar
       ? { taulers: [{ id: '12', nom: 'Ajuts', columnesLead: ['lead'], columnaStatusExp: 'status' }] }
       : String(url).includes('cursor=segona')
         ? { cursor: '', items: [{ id: '2', name: 'Client B', created_at: '2026-11-02',
-          group: { title: 'Sol·licitud' }, column_values: [{ id: 'lead', text: '@Acme Consultors' }, { id: 'status', text: 'En curs' }] }] }
+          group: { title: 'Solicitudes 2026' }, column_values: [{ id: 'lead', text: '@Acme Consultors' }, { id: 'status', text: 'En curs' }] }] }
         : { cursor: 'segona', items: [{ id: '1', name: 'Client A', created_at: '2026-11-01',
           group: { title: 'Leads' }, column_values: [{ id: 'lead', text: '@Acme Consultors' }] }] };
     return { ok: true, json: async () => dades };

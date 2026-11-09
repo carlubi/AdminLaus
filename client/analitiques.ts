@@ -53,7 +53,7 @@ export async function carregaAnalitiques(
         for (const item of pagina.items) {
           const grup = item.group?.title || '';
           const nomGrup = normalitza(grup);
-          const estat = /sol licitud|sollicitud/.test(nomGrup) ? 'sollicitud'
+          const estat = /sol licitud|sollicitud|solicitud/.test(nomGrup) ? 'sollicitud'
             : /lead/.test(nomGrup) ? 'lead' : null;
           if (!estat) continue;
           const lead = ` ${normalitza(item.column_values.filter(c => tauler.columnesLead.includes(c.id)).map(c => c.text).join(' '))} `;
