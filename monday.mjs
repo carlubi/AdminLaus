@@ -312,6 +312,29 @@ export async function actualitzaCacheSubvencions() {
   }
 }
 
+/** Metadades lleugeres per consultar les analítiques en peticions curtes a Vercel. */
+export async function taulersAnalitica() {
+  const d = await gql(`query($w:[ID]) { boards(workspace_ids:$w, limit:100) { id name groups { title } columns { id title } } }`, { w: [WORKSPACE_SUBVENCIONS] });
+  return (d.boards || []).map(t => ({
+    id: t.id, nom: t.name,
+    columnesLead: (t.columns || []).filter(c => /(^|\s)lead(\s|$)/.test(normalitza(c.title))).map(c => c.id),
+    columnaStatusExp: (t.columns || []).find(c => normalitza(c.title) === 'status exp')?.id || '',
+    grups: (t.groups || []).map(g => g.title),
+  })).filter(t => t.id !== BOARD_ID && !/^subitems?\b/i.test(t.nom)
+    && !taulerExclosAnalitica(t.nom) && t.grups.some(estatGrup) && t.columnesLead.length);
+}
+
+/** Una pàgina de Monday; el cursor següent es consumeix en una altra invocació. */
+export async function paginaAnalitica(taulerId, cursor = '') {
+  const seleccio = `cursor items { id name created_at group { title } column_values { id text } }`;
+  const d = cursor
+    ? await gql(`query($c:String!) { next_items_page(cursor:$c, limit:100) { ${seleccio} } }`, { c: cursor })
+    : await gql(`query($b:[ID!]) { boards(ids:$b) { items_page(limit:100) { ${seleccio} } } }`, { b: [taulerId] });
+  const pagina = cursor ? d.next_items_page : d.boards?.[0]?.items_page;
+  if (!pagina) throw new Error('No s’ha trobat el tauler de subvencions');
+  return { cursor: pagina.cursor || '', items: pagina.items || [] };
+}
+
 // Manté la còpia al dia fins i tot si ningú no obre cap expedient.
 setInterval(() => {
   if (Date.now() - cacheSubvencions.quan >= VIDA_CACHE_SUBVENCIONS) {
@@ -335,13 +358,13 @@ export async function analitiquesPrescriptor(prescriptor) {
     const lead = ` ${normalitza(r.lead)} `;
     return claus.some(clau => lead.includes(` ${clau} `));
   });
-  const leads = registres.filter(r => r.estat === 'lead');
+  const leads = registres;
   const sollicituds = registres.filter(r => r.estat === 'sollicitud');
   const perSubvencio = [...new Set(registres.map(r => r.subvencio))].sort().map(subvencio => {
     const items = registres.filter(r => r.subvencio === subvencio);
     return {
       subvencio,
-      leads: items.filter(r => r.estat === 'lead').length,
+      leads: items.length,
       sollicituds: items.filter(r => r.estat === 'sollicitud').length,
       items: items.sort((a, b) => b.data.localeCompare(a.data)).map(r => ({
         id: r.id, empresa: r.empresa, data: r.data, estat: r.estat, statusExp: r.statusExp,
@@ -353,7 +376,8 @@ export async function analitiquesPrescriptor(prescriptor) {
     for (const r of items) {
       const mes = r.data ? r.data.slice(0, 7) : 'Sense data';
       const v = mesos.get(mes) || { mes, leads: 0, sollicituds: 0 };
-      r.estat === 'lead' ? v.leads++ : v.sollicituds++;
+      v.leads++;
+      if (r.estat === 'sollicitud') v.sollicituds++;
       mesos.set(mes, v);
     }
     return [...mesos.values()].sort((a, b) => a.mes.localeCompare(b.mes));

@@ -2,6 +2,7 @@ import type { Prescriptor, CampPrescriptor, ValorCamp, Esquema, EtiquetaEstat, A
 import { $, esc, api, avisa, textSobre, pintaPuntSync } from './comuns.js';
 import { iniciaCalendari } from './calendari.js';
 import { obreUpdates } from './updates.js';
+import { carregaAnalitiques } from './analitiques.js';
 
 const DIES = ['diumenge','dilluns','dimarts','dimecres','dijous','divendres','dissabte'] as const;
 
@@ -67,7 +68,8 @@ function serieDeSubvencio(a: AnaliticaPrescriptor, subvencio: string): Analitica
   for (const item of origen) {
     const mes = item.data ? item.data.slice(0, 7) : 'Sense data';
     const valor = mesos.get(mes) || { mes, leads: 0, sollicituds: 0 };
-    item.estat === 'lead' ? valor.leads++ : valor.sollicituds++;
+    valor.leads++;
+    if (item.estat === 'sollicitud') valor.sollicituds++;
     mesos.set(mes, valor);
   }
   return [...mesos.values()].sort((x, y) => x.mes.localeCompare(y.mes));
@@ -94,7 +96,7 @@ function pintaExpedient(a: AnaliticaPrescriptor): void {
       <article class="relative overflow-hidden rounded-2xl border border-amber-200 bg-white p-5 shadow-sm"><div class="absolute inset-x-0 top-0 h-1 bg-amber-400"></div><div class="flex items-center justify-between gap-3"><p class="text-sm font-semibold text-slate-600">Conversió (%)</p><span class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-700" aria-hidden="true"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m5 15 4-4 3 3 7-7m-5 0h5v5"/></svg></span></div><p class="mt-5 text-4xl font-bold tracking-tight text-amber-700 tabular-nums">${a.resum.conversio}%</p><div class="mt-3 h-2 overflow-hidden rounded-full bg-amber-100" role="progressbar" aria-label="Taxa de conversió" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percentConversio}"><span class="block h-full rounded-full bg-amber-400" style="width:${percentConversio}%"></span></div><p class="mt-2 text-sm text-slate-500">Sol·licituds respecte als leads</p></article>
     </section>
     <section class="rounded-2xl border border-marca-vora bg-white p-5 shadow-sm"><div class="flex flex-wrap items-start justify-between gap-4"><div><h3 class="text-base font-bold text-slate-800">Evolució mensual</h3><p id="subtitolEvolucio" class="mt-1 text-sm text-slate-500">Activitat de totes les subvencions als últims ${Math.min(a.serie.length, 12)} mesos</p></div><label class="block text-xs font-semibold text-slate-600">Subvenció<select id="filtreEvolucio" class="camp mt-1 min-w-56 py-2 text-sm"><option value="">Totes les subvencions</option>${opcionsSubvencions}</select></label><div class="flex items-center gap-3 text-xs font-medium"><span class="flex items-center gap-1.5 text-marca"><i class="h-2.5 w-2.5 rounded-sm bg-marca"></i>Leads</span><span class="flex items-center gap-1.5 text-emerald-700"><i class="h-2.5 w-2.5 rounded-sm bg-emerald-500"></i>Conversions</span></div></div><div id="graficEvolucio">${graficaAnalitica(a.serie)}</div></section>
-    <section><h3 class="font-semibold text-slate-700 mb-2">Per subvenció</h3><div class="overflow-x-auto rounded-xl border border-marca-vora"><table class="w-full text-sm"><thead class="bg-slate-50 text-left text-xs text-slate-500"><tr><th class="px-3 py-2">Subvenció</th><th class="px-3 py-2 text-center">Leads</th><th class="px-3 py-2 text-center">Conversions</th><th class="px-3 py-2 text-center">Conversió (%)</th></tr></thead><tbody class="divide-y divide-marca-vora">${files}</tbody></table></div></section>
+    <section><h3 class="font-semibold text-slate-700 mb-2">Per subvenció</h3><p class="mb-2 text-xs text-slate-500">Els leads inclouen els que ja s’han convertit en sol·licitud.</p><div class="overflow-x-auto rounded-xl border border-marca-vora"><table class="w-full text-sm"><thead class="bg-slate-50 text-left text-xs text-slate-500"><tr><th class="px-3 py-2">Subvenció</th><th class="px-3 py-2 text-center">Leads</th><th class="px-3 py-2 text-center">Conversions</th><th class="px-3 py-2 text-center">Conversió (%)</th></tr></thead><tbody class="divide-y divide-marca-vora">${files}</tbody></table></div></section>
     <div class="flex flex-wrap items-center justify-between gap-3 border-t border-marca-vora pt-4"><p class="text-xs text-slate-400">Coincidències del prescriptor a la columna LEAD de ${a.cobertura.taulers} taulers · ${a.cobertura.coincidencies} registres atribuïts.<br>${esc(textActualitzacio(a.cache?.actualitzada || ''))}${estatCache}</p><button id="actualitzaAnalitiques" type="button" class="btn !py-2 text-sm">Actualitza dades</button></div></div>`;
   $('#tancaExpedient').addEventListener('click', tancaExpedient);
   $('#actualitzaAnalitiques').addEventListener('click', async e => {
@@ -102,8 +104,7 @@ function pintaExpedient(a: AnaliticaPrescriptor): void {
     boto.disabled = true;
     boto.textContent = 'Actualitzant…';
     try {
-      await api('/api/analitiques/actualitza', { method: 'POST' });
-      const dades = await api<AnaliticaPrescriptor>(rutaAnalitiques(a.prescriptor));
+      const dades = await carregaAnalitiques(a.prescriptor);
       if (expedientObertId === a.prescriptor.id) pintaExpedient(dades);
     } catch (e) {
       boto.disabled = false;
@@ -132,8 +133,6 @@ function pintaExpedient(a: AnaliticaPrescriptor): void {
 
 const idExpedientDeUrl = (): string | null => /^#prescriptors\/(\d+)$/.exec(location.hash)?.[1] ?? null;
 const rutaExpedient = (id: string): string => `#prescriptors/${id}`;
-const rutaAnalitiques = (p: Pick<Prescriptor, 'id' | 'empresa' | 'contacte'>): string =>
-  `/api/prescriptors/${p.id}/analitiques?empresa=${encodeURIComponent(p.empresa)}&contacte=${encodeURIComponent(p.contacte || '')}`;
 
 function amagaExpedient(): void {
   expedientObertId = null;
@@ -160,7 +159,7 @@ async function obreExpedient(p: Prescriptor, desaHistorial = true): Promise<void
   $('#contingutExpedient').innerHTML = `<div class="min-h-full flex items-center justify-center p-6" role="status" aria-live="polite">
     <div class="w-full max-w-md text-center">
       <p class="text-lg font-semibold text-slate-700">Analitzant els taulers de subvencions…</p>
-      <p class="mt-2 text-sm text-slate-500">Busquem les coincidències a la columna LEAD.</p>
+      <p id="progresAnalitiques" class="mt-2 text-sm text-slate-500">Busquem les coincidències a la columna LEAD.</p>
       <div class="mt-6 h-2 overflow-hidden rounded-full bg-marca-vora" role="progressbar" aria-label="Carregant analítiques" aria-valuetext="Progrés indeterminat">
         <span class="block h-full w-2/5 rounded-full bg-marca animate-progres"></span>
       </div>
@@ -168,7 +167,9 @@ async function obreExpedient(p: Prescriptor, desaHistorial = true): Promise<void
   </div>`;
   $('#contingutExpedient').focus();
   try {
-    const dades = await api<AnaliticaPrescriptor>(rutaAnalitiques(p));
+    const dades = await carregaAnalitiques(p, (fets, total) => {
+      if (expedientObertId === p.id) $('#progresAnalitiques').textContent = `Revisant taulers de subvencions: ${fets} de ${total}`;
+    });
     if (expedientObertId === p.id) pintaExpedient(dades);
   } catch (e) {
     if (expedientObertId === p.id) $('#contingutExpedient').innerHTML = `<div class="mx-auto max-w-[1700px] p-6 text-sm text-red-600">No s’han pogut carregar les analítiques: ${esc((e as Error).message)}</div>`;
